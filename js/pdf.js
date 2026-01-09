@@ -235,10 +235,11 @@ async function generatePDF(data) {
 
     // Row 2: Account number
     const accountTypeStr = data.accountType || '普通';
+    const accountNumberStr = String(data.accountNumber || '');
     drawTableRow(doc, margin, y, [
         { text: '口座番号', width: 25 },
         { text: accountTypeStr, width: 20 },
-        { text: data.accountNumber || '', width: 135 }
+        { text: accountNumberStr, width: 135 }
     ], rowHeight);
     y += rowHeight;
 

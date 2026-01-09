@@ -404,7 +404,14 @@ function getSubmissionsData() {
       };
 
       const key = keyMap[header] || header;
-      submission[key] = row[index] || '';
+      let value = row[index];
+
+      // Convert Date objects to JST string format
+      if (value instanceof Date) {
+        value = Utilities.formatDate(value, 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss');
+      }
+
+      submission[key] = value || '';
     });
 
     submissions.push(submission);
