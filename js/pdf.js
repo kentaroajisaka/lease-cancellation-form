@@ -199,14 +199,20 @@ async function generatePDF(data) {
     // Row 5: Inspection date and time
     const inspectionDateStr = data.inspectionDate ? formatDate(data.inspectionDate) : '';
     // Filter out invalid time formats (like Excel serial dates "1899/12/30...")
-    let inspectionTimeStr = data.inspectionTime || '';
-    if (inspectionTimeStr && (inspectionTimeStr.includes('1899') || inspectionTimeStr.includes('1900'))) {
-        inspectionTimeStr = '';
+    let inspectionTimeStr = '';
+    if (data.inspectionTime) {
+        const timeVal = String(data.inspectionTime);
+        // Check for valid time formats: "9時30分", "9時", "10:30" etc.
+        // Exclude Excel serial dates like "1899/12/30..." or "2026/01/09..."
+        const isExcelDate = /^\d{4}[\/-]\d{1,2}[\/-]\d{1,2}/.test(timeVal);
+        if (!isExcelDate && timeVal.trim()) {
+            inspectionTimeStr = timeVal;
+        }
     }
     drawTableRow(doc, margin, y, [
         { text: '立会希望日', width: 25 },
         { text: inspectionDateStr, width: 35 },
-        { text: String(inspectionTimeStr), width: 30 },
+        { text: inspectionTimeStr, width: 30 },
         { text: `（備考：${data.remarks || ''}）`, width: 90 }
     ], rowHeight);
     y += rowHeight;
