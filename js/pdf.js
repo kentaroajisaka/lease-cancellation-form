@@ -200,14 +200,18 @@ async function generatePDF(data) {
     const inspectionDateStr = data.inspectionDate ? formatDate(data.inspectionDate) : '';
     // Filter out invalid time formats (like Excel serial dates "1899/12/30...")
     let inspectionTimeStr = '';
-    console.log('DEBUG inspectionTime raw:', data.inspectionTime, 'type:', typeof data.inspectionTime);
     if (data.inspectionTime) {
         const timeVal = String(data.inspectionTime);
-        console.log('DEBUG timeVal:', timeVal);
-        // Check for valid time formats: "9時30分", "9時", "10:30" etc.
-        // Exclude Excel serial dates like "1899/12/30..." or "2026/01/09..."
-        const isExcelDate = /^\d{4}[\/-]\d{1,2}[\/-]\d{1,2}/.test(timeVal);
-        if (!isExcelDate && timeVal.trim()) {
+        // Check if it's an Excel date format like "1899/12/30 09:00:00"
+        const excelDateMatch = timeVal.match(/^\d{4}[\/-]\d{1,2}[\/-]\d{1,2}\s+(\d{1,2}:\d{2})/);
+        if (excelDateMatch) {
+            // Extract time part and convert to Japanese format (e.g., "9時00分")
+            const timeParts = excelDateMatch[1].split(':');
+            const hour = parseInt(timeParts[0], 10);
+            const minute = timeParts[1];
+            inspectionTimeStr = `${hour}時${minute}分`;
+        } else if (!/^\d{4}[\/-]\d{1,2}[\/-]\d{1,2}$/.test(timeVal) && timeVal.trim()) {
+            // Not a date-only format, use as-is
             inspectionTimeStr = timeVal;
         }
     }
