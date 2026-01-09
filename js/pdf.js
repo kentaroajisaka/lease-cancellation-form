@@ -198,11 +198,15 @@ async function generatePDF(data) {
 
     // Row 5: Inspection date and time
     const inspectionDateStr = data.inspectionDate ? formatDate(data.inspectionDate) : '';
-    const inspectionTimeStr = data.inspectionTime || '';
+    // Filter out invalid time formats (like Excel serial dates "1899/12/30...")
+    let inspectionTimeStr = data.inspectionTime || '';
+    if (inspectionTimeStr && (inspectionTimeStr.includes('1899') || inspectionTimeStr.includes('1900'))) {
+        inspectionTimeStr = '';
+    }
     drawTableRow(doc, margin, y, [
         { text: '立会希望日', width: 25 },
         { text: inspectionDateStr, width: 35 },
-        { text: inspectionTimeStr, width: 30 },
+        { text: String(inspectionTimeStr), width: 30 },
         { text: `（備考：${data.remarks || ''}）`, width: 90 }
     ], rowHeight);
     y += rowHeight;
