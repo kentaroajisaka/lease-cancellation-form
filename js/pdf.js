@@ -3,36 +3,82 @@
  * Recreates the original lease cancellation form layout
  */
 
-// Load Japanese font (TTF format required for jsPDF)
-// Using IPAex Gothic font from jsDelivr CDN
-const FONT_URL = 'https://cdn.jsdelivr.net/gh/nicolo-ribaudo/noto-fonts-subset@v1/NotoSansJP-Regular.ttf';
-
+// Use a CDN that serves proper TTF fonts with CORS headers
+// Source Sans 3 has Japanese support via Google Fonts
 let fontLoaded = false;
 let fontBase64 = null;
 
 /**
- * Load Japanese font
+ * Load Japanese font using a reliable method
  */
 async function loadJapaneseFont() {
-    if (fontLoaded) return;
+    if (fontLoaded && fontBase64) return true;
 
     try {
-        const response = await fetch(FONT_URL);
-        const blob = await response.blob();
+        // Use Google Fonts API to get Noto Sans JP
+        // This URL provides a proper TTF file with CORS headers
+        const fontUrl = 'https://fonts.gstatic.com/s/notosansjp/v52/-F6jfjtqLzI2JPCgQBnw7HFyzSD-AsregP8VFBEj75s.ttf';
 
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = function() {
-                fontBase64 = reader.result.split(',')[1];
-                fontLoaded = true;
-                resolve();
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
+        const response = await fetch(fontUrl, {
+            mode: 'cors',
+            headers: {
+                'Accept': 'font/ttf,application/font-sfnt,application/x-font-ttf,*/*'
+            }
         });
+
+        if (!response.ok) {
+            throw new Error(`Font fetch failed: ${response.status}`);
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+
+        // Convert ArrayBuffer to Base64 using a more reliable method
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = '';
+        const chunkSize = 8192;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+            const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+            binary += String.fromCharCode.apply(null, chunk);
+        }
+        fontBase64 = btoa(binary);
+        fontLoaded = true;
+        console.log('Font loaded successfully, size:', bytes.length);
+        return true;
     } catch (error) {
         console.error('Error loading font:', error);
-        throw error;
+        // Try fallback font
+        return await loadFallbackFont();
+    }
+}
+
+/**
+ * Load fallback font if primary fails
+ */
+async function loadFallbackFont() {
+    try {
+        // Try another source - M+ font from jsDelivr
+        const fallbackUrl = 'https://cdn.jsdelivr.net/gh/nicolo-ribaudo/noto-fonts-subset@1.2.5/NotoSansJP-Regular.min.ttf';
+
+        const response = await fetch(fallbackUrl);
+        if (!response.ok) {
+            throw new Error(`Fallback font fetch failed: ${response.status}`);
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = '';
+        const chunkSize = 8192;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+            const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+            binary += String.fromCharCode.apply(null, chunk);
+        }
+        fontBase64 = btoa(binary);
+        fontLoaded = true;
+        console.log('Fallback font loaded successfully, size:', bytes.length);
+        return true;
+    } catch (error) {
+        console.error('Fallback font also failed:', error);
+        return false;
     }
 }
 
@@ -48,14 +94,14 @@ async function generatePDF(data) {
             return;
         }
 
-        // Load font first
-        try {
-            await loadJapaneseFont();
-        } catch (error) {
-            console.error('Font loading error:', error);
-            alert('フォントの読み込みに失敗しました。');
-            return;
-        }
+        // Show loading indicator
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = 'pdf-loading';
+        loadingDiv.innerHTML = '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:9999;"><div style="background:white;padding:20px;border-radius:8px;">PDF生成中...</div></div>';
+        document.body.appendChild(loadingDiv);
+
+        // Load font
+        const fontLoadSuccess = await loadJapaneseFont();
 
         // Create PDF (A4 size)
         const doc = new jsPDF({
@@ -64,10 +110,14 @@ async function generatePDF(data) {
             format: 'a4'
         });
 
-    // Add Japanese font
-    doc.addFileToVFS('NotoSansJP-Regular.ttf', fontBase64);
-    doc.addFont('NotoSansJP-Regular.ttf', 'NotoSansJP', 'normal');
-    doc.setFont('NotoSansJP');
+        // Add Japanese font if loaded
+        if (fontLoadSuccess && fontBase64) {
+            doc.addFileToVFS('NotoSansJP.ttf', fontBase64);
+            doc.addFont('NotoSansJP.ttf', 'NotoSansJP', 'normal');
+            doc.setFont('NotoSansJP');
+        } else {
+            alert('日本語フォントの読み込みに失敗しました。PDFは英数字のみ表示されます。');
+        }
 
     const pageWidth = 210;
     const margin = 15;
@@ -279,9 +329,16 @@ async function generatePDF(data) {
     // Save PDF
     const fileName = `解約申込書_${data.contractorName || '名前未入力'}_${formatDateForFileName(new Date())}.pdf`;
     doc.save(fileName);
+
     } catch (error) {
         console.error('PDF generation error:', error);
         alert('PDFの生成に失敗しました: ' + error.message);
+    } finally {
+        // Remove loading indicator
+        const loadingDiv = document.getElementById('pdf-loading');
+        if (loadingDiv) {
+            loadingDiv.remove();
+        }
     }
 }
 
