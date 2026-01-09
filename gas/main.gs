@@ -188,8 +188,12 @@ function submitForm(data) {
     throw new Error('Submissions sheet not found. Please run initializeSpreadsheet first.');
   }
 
+  // Format date as JST
+  const now = new Date();
+  const jstDate = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss');
+
   const row = [
-    new Date().toLocaleString('ja-JP'),
+    jstDate,
     data.landlordAddress || '',
     data.landlordName || '',
     data.tenantAddress || '',
