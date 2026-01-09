@@ -137,10 +137,10 @@ async function generatePDF(data) {
     y += 12;
 
     // Tenant info (right side)
-    doc.text('（借主住所）', pageWidth - margin - 60, y - 6);
-    doc.text(`${data.tenantAddress || ''}`, pageWidth - margin - 45, y - 6);
+    const tenantX = pageWidth / 2 + 10;
+    doc.text(`（借主住所）　${data.tenantAddress || ''}`, tenantX, y - 6);
     y += 6;
-    doc.text(`（氏名）　　　${data.tenantName || ''}`, pageWidth - margin - 60, y - 6);
+    doc.text(`（氏名）　　　${data.tenantName || ''}`, tenantX, y - 6);
     doc.text('印', pageWidth - margin - 5, y - 6);
     y += 10;
 
